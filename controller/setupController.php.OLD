@@ -1,0 +1,410 @@
+<?php
+
+class setupController extends BaseController {
+	public function index() {
+		if($_REQUEST['createdb'] == "ok") {
+			$cfg = new iniParser("config.ini");  
+
+			$tool = $cfg->get("database"); 
+			$cfg->setValue("database","db_name", $_REQUEST['dbname']); 
+			$cfg->setValue("database","db_username", $_REQUEST['dbuser']); 
+			$cfg->setValue("database","db_password", $_REQUEST['dbpass']); 
+			$cfg->setValue("database","db_hostname", $_REQUEST['dbhost']); 
+			$cfg->setValue("database","db_port", $_REQUEST['dbport']); 
+
+			$cfg->save("config.ini");	
+
+			$this->crea_db($_REQUEST['dbname'], $_REQUEST['dbuser'], $_REQUEST['dbpass'], $_REQUEST['dbhost'], $_REQUEST['dbport']);
+		}
+
+		else {
+			$this->registry->template->show("setup");
+		}
+	}
+
+	private function crea_db($db, $user, $pass, $host, $port) {
+		try {
+			$conn = new PDO("pgsql:host=$host;port=$port;dbname=$db", $user, $pass);
+
+			$conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+			$sql = "GRANT ALL PRIVILEGES ON DATABASE ".$db." TO ".$user.";
+				CREATE EXTENSION IF NOT EXISTS postgres_fdw;
+				CREATE SERVER emporio_centrale FOREIGN DATA WRAPPER postgres_fdw OPTIONS (host 'localhost', dbname 'emporiodb_centrale', port '5432');
+				CREATE USER MAPPING FOR ".$user." SERVER emporio_centrale OPTIONS (user 'emporiocentrale', password 'emporiocentrale');
+				
+			/*	\c ".$db." */				
+
+				CREATE FOREIGN TABLE IF NOT EXISTS comuni (
+    				cod_istat VARCHAR(10),
+    				nome_comune VARCHAR(50),
+    				provincia VARCHAR(20),
+    				cap VARCHAR(5),
+    				regione VARCHAR(20)
+				) SERVER emporio_centrale;
+
+				CREATE TABLE users (
+    				login VARCHAR(20),
+    				password VARCHAR(100),
+    				ruolo VARCHAR(50),
+    				cognome VARCHAR(100),
+    				nome VARCHAR(100),
+
+    				PRIMARY KEY(login)
+				);
+
+				CREATE TABLE enti (
+    				id_ente SERIAL,
+    				ragione_sociale VARCHAR(255),
+    				inserito_il DATE,
+    				note TEXT,
+
+    				PRIMARY KEY(id_ente)
+				);
+
+				CREATE TABLE famiglie (
+    				codice_fiscale VARCHAR(20),
+    				cognome VARCHAR(100) NOT NULL,
+    				nome VARCHAR(100),
+    				is_ente BOOLEAN NOT NULL DEFAULT false,
+    				data_nascita DATE,
+    				luogo_nascita VARCHAR(255),
+    				nazione VARCHAR(100),
+    				nazionalita VARCHAR(100),
+    				sesso VARCHAR(10),
+    				ente_proponente INT,
+    				indirizzo VARCHAR(255),
+    				localita VARCHAR(255),
+    				cap VARCHAR(10),
+    				comune VARCHAR(10),
+    				telefono_1 VARCHAR(15),
+    				cellulare VARCHAR(15),
+    				email VARCHAR(255),
+    				num_componenti INT,
+    				punti_totali INT NOT NULL,
+    				punti_residui INT NOT NULL,
+    				esenzione BOOLEAN NOT NULL DEFAULT false,
+    				giorno_1 VARCHAR(20),
+    				orario VARCHAR(40),
+    				scadenza DATE,
+    				iscritto_da DATE,
+    				sospeso BOOLEAN NOT NULL DEFAULT false,
+    				sospeso_da DATE,
+    				sospeso_a DATE,
+    				note TEXT,
+
+    				PRIMARY KEY(codice_fiscale),
+    				FOREIGN KEY(ente_proponente) REFERENCES enti(id_ente)
+        				ON UPDATE CASCADE
+        				ON DELETE NO ACTION
+				);
+
+				CREATE TABLE componenti_famiglie (
+    				c_codice_fiscale VARCHAR(20),
+    				capofamiglia VARCHAR(20),
+    				cognome VARCHAR(255),
+    				nome VARCHAR(255),
+    				ruolo VARCHAR(100),
+    				sesso VARCHAR(15),
+    				data_nascita DATE,
+    				luogo_nascita VARCHAR(255),
+    				nazione VARCHAR(100),
+    				nazionalita VARCHAR(100),
+
+    				PRIMARY KEY(c_codice_fiscale),
+    				FOREIGN KEY(capofamiglia) REFERENCES famiglie(codice_fiscale)
+        				ON UPDATE CASCADE
+        				ON DELETE CASCADE
+				);
+
+				CREATE FOREIGN TABLE IF NOT EXISTS tabella_carbonaro (
+    				famigliari INT,
+    				punti_famiglia INT,
+    				coefficiente REAL,
+    				punti_corretti INT
+				) SERVER emporio_centrale;
+
+				CREATE FOREIGN TABLE IF NOT EXISTS um (
+    				val_um VARCHAR(10),
+    				descrizione VARCHAR(50)
+				) SERVER emporio_centrale;
+
+				CREATE FOREIGN TABLE IF NOT EXISTS categorie (
+    				id_categoria SERIAL,
+    				descrizione_categoria VARCHAR(255),
+    				limite_spesa_max INT,
+    				limite_mese_max INT
+				) SERVER emporio_centrale;
+
+				CREATE FOREIGN TABLE IF NOT EXISTS tipologie (
+    				id_tipologia SERIAL,
+    				categoria INT,
+    				descrizione_tipologia VARCHAR(255),
+    				warning_qta_minima INT,
+    				danger_qta_minima INT,
+    				punti INT NOT NULL
+				) SERVER emporio_centrale;
+
+				CREATE TABLE barcodes (
+    				barcode VARCHAR(50),
+    				tipologia INT,
+    				descrizione VARCHAR(255) NOT NULL,
+    				um_1 VARCHAR(10),
+    				um_2 VARCHAR(10),
+    				contenuto_um1 REAL,
+    				contenuto_um2 REAL,
+    				agea BOOL NOT NULL DEFAULT false,
+    				classificato BOOL NOT NULL DEFAULT true,
+    				um_stock VARCHAR(10),
+    				stock INT,
+
+    				PRIMARY KEY(barcode)
+				);
+
+				CREATE TABLE limiti_nucleo (
+    				categoria_merce INT,
+    				lim_1c_spesa INT,
+    				lim_2c_spesa INT,
+    				lim_3c_spesa INT,
+    				lim_4c_spesa INT,
+    				lim_5c_spesa INT,
+    				lim_6c_spesa INT,
+    				lim_7c_spesa INT,
+    				lim_8c_spesa INT,
+    				lim_9c_spesa INT,
+    				lim_10c_spesa INT,
+    				lim_1c_mese INT,
+    				lim_2c_mese INT,
+    				lim_3c_mese INT,
+    				lim_4c_mese INT,
+    				lim_5c_mese INT,
+    				lim_6c_mese INT,
+    				lim_7c_mese INT,
+    				lim_8c_mese INT,
+    				lim_9c_mese INT,
+    				lim_10c_mese INT,
+
+    				PRIMARY KEY(categoria_merce)
+				);
+
+				CREATE TABLE scontrini (
+    				id_scontrino VARCHAR(50),
+    				codice_fiscale VARCHAR(20),
+					cliente_effettivo VARCHAR(50),
+    				data TIMESTAMP,
+    				totale_punti INT,
+    				cassa VARCHAR(20),
+    				operatore VARCHAR(50),
+
+    				PRIMARY KEY(id_scontrino),
+    				FOREIGN KEY(codice_fiscale) REFERENCES famiglie(codice_fiscale)
+        				ON UPDATE CASCADE
+        				ON DELETE CASCADE,
+    				FOREIGN KEY(operatore) REFERENCES users(login)
+        				ON UPDATE CASCADE
+        				ON DELETE NO ACTION
+				);
+
+				CREATE TABLE spesa (
+    				id_scontrino VARCHAR(50),
+    				barcode VARCHAR(50),
+    				tipologia INT,
+    				data TIMESTAMP,
+    				punti INT,
+    				qta INT,
+
+    				FOREIGN KEY(barcode) REFERENCES barcodes(barcode)
+        				ON UPDATE CASCADE
+        				ON DELETE NO ACTION,
+    				FOREIGN KEY(id_scontrino) REFERENCES scontrini(id_scontrino)
+        				ON UPDATE CASCADE
+        				ON DELETE CASCADE
+				);
+
+				CREATE TABLE fornitori (
+    				id_fornitore SERIAL,
+    				ragione_sociale VARCHAR(100),
+    				cognome VARCHAR(50),
+    				nome VARCHAR(50),
+    				referente VARCHAR(100),
+    				indirizzo VARCHAR(255),
+    				localita VARCHAR(100),
+    				cap VARCHAR(5),
+    				comune VARCHAR(10),
+    				telefono VARCHAR(50),
+   	 				email VARCHAR(255),
+    				fornitore_da DATE,
+    				donatore BOOLEAN DEFAULT false,
+    				note TEXT,
+
+    				PRIMARY KEY(id_fornitore)
+				);
+
+				CREATE TABLE donazioni (
+    				id_transazione SERIAL,
+    				id_fornitore INT,
+    				barcode VARCHAR(50),
+    				quantita INT,
+    				data_donazione DATE,
+    				acquistato BOOL NOT NULL DEFAULT false,
+    				ddt VARCHAR(15),
+
+    				PRIMARY KEY(id_transazione),
+    				FOREIGN KEY(id_fornitore) REFERENCES fornitori(id_fornitore)
+        				ON UPDATE CASCADE
+        				ON DELETE NO ACTION,
+    				FOREIGN KEY(barcode) REFERENCES barcodes(barcode)
+        				ON UPDATE CASCADE
+        				ON DELETE CASCADE
+				);
+
+				CREATE TABLE registro_agea (
+    				data DATE,
+    				ddt VARCHAR(15),
+    				carico BOOLEAN default false,
+    				id_tipologia INT,
+    				um_1 VARCHAR(10),
+    				quantita REAL,
+    				giacenza REAL,
+    				indigenti INT,
+					cliente VARCHAR(20)
+				);
+
+				CREATE TABLE notifiche (
+    				id_notifica SERIAL,
+    				tipo VARCHAR(100),
+    				msg VARCHAR(255),
+    				data TIMESTAMP,
+    				letto BOOLEAN DEFAULT false,
+
+    				PRIMARY KEY(id_notifica)
+				);
+
+				CREATE TABLE logs (
+					log_id SERIAL, 
+    				log_data TIMESTAMP, 
+    				flag VARCHAR(30), 
+    				log_descrizione TEXT, 
+    				login VARCHAR(20), 
+
+    				PRIMARY KEY(log_id), 
+    				FOREIGN KEY(login) REFERENCES users(login) 
+        				ON UPDATE CASCADE   
+        				ON DELETE NO ACTION
+				);
+
+				CREATE TABLE emporio_config (
+    				nome_emporio VARCHAR(255),
+					cognome_responsabile VARCHAR(100),
+					nome_responsabile VARCHAR(100),
+					data_nascita DATE,
+					comune_nascita VARCHAR(10),
+					nome_associazione VARCHAR(255),
+					indirizzo_associazione VARCHAR(255),
+					localita VARCHAR(100),
+					comune VARCHAR(10),
+					cap VARCHAR(5),
+
+					PRIMARY KEY(nome_emporio)
+				);
+
+				CREATE FOREIGN TABLE IF NOT EXISTS lista_empori (
+    				id_emporio SERIAL,
+					nome_emporio VARCHAR(255),
+					dbname VARCHAR(100),
+					dbuser VARCHAR(100),
+					dbpass VARCHAR(100),
+					dbhost VARCHAR(100) DEFAULT 'localhost',
+					dbport INT DEFAULT 5432
+				) SERVER emporio_centrale;
+
+			/*	GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO ".$user.";
+				GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO ".$user."; */
+			";
+
+			$conn->exec($sql);
+
+			$sql_db = "INSERT INTO lista_empori(nome_emporio, dbname, dbuser, dbpass, dbhost, dbport) 
+					   VALUES('noname',
+							'".pg_escape_string(strtolower($db))."', 
+							'".pg_escape_string($user)."', 
+							'".pg_escape_string($pass)."', 
+							'".pg_escape_string(strtolower($host))."', 
+							'".$port."')";
+			$conn->exec($sql_db);
+
+			header("Location: /setup/config");
+		}
+		catch(PDOException $e) {
+    		echo "Error : " . $e->getMessage() . "<br/>";
+    		die();
+		}
+
+	}
+
+	public function config($step = '') {
+		if($step == '') {
+			$this->registry->template->show("setup2");
+		}
+
+		if($step == '2') {
+			// Salvo il nome dell'emporio nel file di configurazione. Visto che mi serve
+			// solo per le navbar, e` quasi inutile richiamare ogni volta il dato dal db..
+            $cfg = new iniParser("config.ini");
+            $tool = $cfg->get("emporio");
+            $cfg->setValue("emporio","nome_emporio", $_REQUEST['nome_emporio']);
+            $cfg->save("config.ini");
+	
+			// Scrivo tutto anche sul db, che non si sa mai
+			$sql = "INSERT INTO emporio_config 
+					VALUES( '".pg_escape_string(strtolower($_REQUEST['nome_emporio']))."', 
+						'".pg_escape_string(strtolower($_REQUEST['cognome_responsabile']))."',
+						'".pg_escape_string(strtolower($_REQUEST['nome_responsabile']))."',
+						'".$_REQUEST['data_nascita']."',
+						'".$_REQUEST['comune_nascita']."',
+						'".pg_escape_string(strtolower($_REQUEST['nome_associazione']))."',
+						'".pg_escape_string(strtolower($_REQUEST['indirizzo_associazione']))."',
+						'".pg_escape_string(strtolower($_REQUEST['localita']))."',
+						'".$_REQUEST['comune_associazione']."',
+						''
+					)";
+			$count = $this->registry->db->exec($sql);
+
+			$sql_lastval = $this->registry->db->query("SELECT MAX(id_emporio) AS id_emporio FROM lista_empori");
+			$val = $sql_lastval->fetch();
+
+			$sql_update_nome = "UPDATE lista_empori SET nome_emporio = '".pg_escape_string(strtolower($_REQUEST['nome_emporio']))."' 
+								WHERE id_emporio = '".$val['id_emporio']."'";
+			$count2 = $this->registry->db->exec($sql_update_nome);
+			
+
+			if($count > 0) {
+				header("Location: /setup/config/3");
+			}
+		}
+
+		if($step == '3') {
+			$this->importa_demousers();
+			$this->registry->template->show("setup3");
+		}
+	}
+	
+	private function importa_demousers() {
+		$fd = fopen("public/files/demousers.txt", "r");
+    
+        if($fd) {
+            while(($data = fgetcsv($fd, "|", ";")) !== false) {
+                $sql = "INSERT INTO users VALUES('".$data[0]."', '".$data[1]."', '".$data[2]."', '".$data[3]."', '".$data[4]."')";
+                $this->registry->db->exec($sql);
+            }
+        }
+
+        fclose($fd);
+	}
+
+	private function test() {
+		echo "Ciao";
+	}
+
+}
+
+?>

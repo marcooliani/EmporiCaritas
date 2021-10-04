@@ -1,0 +1,5 @@
+admin;emporio;admin;Amministratore;;
+democassa;1234;cassiere;Rossi;Mario
+demobackend;1234;backend;Verdi;Giuseppe
+demosuperlocale;1234;superlocale;Bianchi;Antonio
+demosuper;1234;super;Marrone;Franco

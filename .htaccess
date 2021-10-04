@@ -1,0 +1,8 @@
+RewriteEngine on
+
+RewriteRule \.(js|ico|csv|txt|gif|jpg|png|css|xml)$ - [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+RewriteRule ^(.*)$ index.php?rt=$1 [L,QSA]

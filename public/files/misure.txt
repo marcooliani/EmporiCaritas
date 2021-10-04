@@ -1,0 +1,10 @@
+l;Litri;capacita
+cl;Centilitri;capacita
+ml;Millilitri;capacita
+kg;Chilogrammi;peso
+g;Grammi;peso
+pz;Pezzi;pezzi
+dosi;Dosi;dosi
+m;Metri;lunghezza
+cm;Centimetri;lunghezza
+mm;Millimetri;lunghezza

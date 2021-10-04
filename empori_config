@@ -1,0 +1,16 @@
+## Creare utente con permessi di superuser (serve per il FDW di PG)
+  createuser emporio
+  psql template1
+  alter user emporio with password 'emporio';
+  alter user emporio with superuser;
+  create database emporiodb;
+
+Serve poi un altro utente per il db centrale, questo però con permessi
+normali.
+
+Per abilitare il modulo FDW bisogna scaricare un pacchetto aggiuntivo:
+ apt-get install postgresql-contrib
+
+Il resto poi viene fatto alla creazione delle tabelle dei db degli
+empori locali.
+Nota: il FDW è installato/abilitato per utente, non globalmente

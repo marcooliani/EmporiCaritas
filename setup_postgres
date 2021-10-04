@@ -1,0 +1,33 @@
+su - postgres
+createuser emporio
+psql template1
+alter user emporio with password 'emporio';
+alter user emporio with superuser;
+create database emporiodb;
+
+\q
+psql emporiodb -U emporio -h localhost < /var/www/Emporio/model/emporiodb_pg.sql
+
+psql emporiodb emporio -h localhost
+
+######## Modulo fdw
+apt-get install postgresql-contrib
+
+; una volta loggato come utente postgres:
+CREATE EXTENSION postgres_fdw; (l'utente deve essere superuser!)
+
+#CREATE FOREIGN DATA WRAPPER postgres_fdw; (da rivedere, non necessario!)
+
+CREATE SERVER myserver FOREIGN DATA WRAPPER postgres_fdw OPTIONS (host 'foo', dbname 'foodb', port '5432'); (db remoto)
+
+CREATE USER MAPPING FOR current_user SERVER myserver OPTIONS (user 'remote_user', password 'secret'); (mapping utente locale-utente remoto)
+
+CREATE FOREIGN TABLE IF NOT EXISTS films (
+    code        char(5) NOT NULL,
+    title       varchar(40) NOT NULL,
+    did         integer NOT NULL,
+    date_prod   date,
+    kind        varchar(10),
+    len         interval hour to minute
+)
+SERVER my_server;
